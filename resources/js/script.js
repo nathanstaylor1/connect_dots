@@ -1,30 +1,61 @@
-var dotNumber = 100;
-var lineLength = 120;
+// config  //
+
+var dotDensity = 100;
+var dotSize = 10;
+var lineLength = 100;
+var pullForce = 5000
+var pushForce = 2500
+var rotateForce = 6000
+
+var haloGrowthRate = 0.1;
+var haloShrinkRate = 0.5;
+
+var maxHalo = 5;
+
+var width = 2000;
+var height = 2000;
+var area = width * height
 
 var black = "#000000"
 var color1 = "#76B729"
 var color2 = "#F07D00"
+var color3 = "#086634"
+var color4 = "#3BA935"
 
-var colors = [black, color1, color2];
+var dotNumber = area / 1000000 * dotDensity
+
+// functions  //
+
+function sizeCanvas(){
+
+	console.log($(".dot-canvas"))
+
+	
+}
+
+var colors = [black, color1, color2, color3, color4];
 
 randomColor = function(){
 	return colors[Math.floor(Math.random()*colors.length)]
 }
 
 randomCoOrd = function(){
-	return Math.random()*2000
+	return [Math.random() * width, Math.random() * height]
 }
+
 
 var dots = [];
 
 function Dot(color){
 
 	this.color = randomColor();
-	this.x = randomCoOrd();
-	this.y = randomCoOrd();
-	this.xVel = Math.random()*1 -2;
-	this.yVel = Math.random()*1 -2;
+	this.x = randomCoOrd()[0];
+	this.y = randomCoOrd()[1];
+	this.xVel = Math.random() * 2 - 1;
+	this.yVel = Math.random() * 2 - 1;
 	this.isClose = [];
+	this.halo = Math.random() * 3 * maxHalo;
+
 	dots.push(this);
 
 }
@@ -35,21 +66,40 @@ Dot.prototype.draw = function(context){
 	context.fillStyle = this.color;
 
 	context.beginPath();
-	context.arc(this.x,this.y,10,0,Math.PI*2,true);
+	context.arc(this.x,this.y,dotSize,0,Math.PI*2,true);
 	context.closePath();
-	context.stroke();
 	context.fill();
+
+	if (this.halo > 0){
+
+		context.globalAlpha = 0.2;
+		context.beginPath();
+		context.arc(this.x,this.y,dotSize + this.halo ,0,Math.PI*2,true);
+		context.closePath();
+		context.fill();
+	}
+	context.globalAlpha = 0.3;
+
 
 }
 
 Dot.prototype.bounce = function(){
-	if (this.x < 0 || this.x > 2000) this.xVel = -this.xVel;
-	if (this.y < 0 || this.y > 2000) this.yVel = -this.yVel;
+	if (this.x < 0 || this.x > width) this.xVel = -this.xVel;
+	if (this.y < 0 || this.y > height) this.yVel = -this.yVel;
 }
 
 Dot.prototype.updatePosition = function(){
 	this.x += this.xVel;
 	this.y += this.yVel;
+
+
+
+	if (this.isClose.length > 0 && this.halo < maxHalo*this.isClose.length){
+		this.halo += haloGrowthRate;
+	} else if (this.halo > 0){
+		this.halo -= haloShrinkRate;
+	}
+
 }
 
 
@@ -58,7 +108,9 @@ Dot.prototype.getDistance = function(otherDot){
 	var xDistance = this.x - otherDot.x;
 	var yDistance = this.y - otherDot.y;
 
-	return Math.sqrt( xDistance*xDistance + yDistance*yDistance)
+	var twoDistance = Math.sqrt( xDistance*xDistance + yDistance*yDistance)
+
+	return twoDistance
 
 };
 
@@ -83,6 +135,11 @@ Dot.prototype.drawLines = function(context){
 	var scope = this;
 
 	this.isClose.forEach(function(dot){
+
+		lineWidth = lineLength / scope.getDistance(dot) - 1 ; 
+
+		context.lineWidth = lineWidth
+
 		context.beginPath();
 		context.moveTo(scope.x,scope.y);
 		context.lineTo(dot.x,dot.y);
@@ -99,23 +156,70 @@ Dot.prototype.getDirectionVector = function(otherDot){
 
 }
 
-Dot.prototype.pull = function(){
+Dot.prototype.pull = function(otherDot){
+
+	var direction = this.getDirectionVector(otherDot);
+
+	this.xVel -= direction.x/pullForce
+	this.yVel -= direction.y/pullForce
+	otherDot.xVel += direction.x/pullForce
+	otherDot.yVel += direction.y/pullForce
+
+}
+
+
+Dot.prototype.push = function(otherDot){
+
+	var direction = this.getDirectionVector(otherDot);
+
+	this.xVel += direction.x/pushForce
+	this.yVel += direction.y/pushForce
+	otherDot.xVel -= direction.x/pushForce
+	otherDot.yVel -= direction.y/pushForce
+
+}
+
+Dot.prototype.rotate = function(otherDot){
+
+	var direction = this.getDirectionVector(otherDot);
+
+	this.xVel += direction.y/rotateForce
+	this.yVel += direction.x/rotateForce
+	otherDot.xVel -= direction.y/rotateForce
+	otherDot.yVel -= direction.x/rotateForce
+
+}
+
+Dot.prototype.interact = function(){
 
 	var scope = this;
 
 	this.isClose.forEach(function(dot){
 
-		var direction = scope.getDirectionVector(dot);
+		if (scope.color == dot.color){
+			scope.push(dot);
+		} else if (scope.color == colors[colors.indexOf(dot.color) + 1]){
+			scope.rotate(dot);
+ 		} else {
+ 			scope.pull(dot);
+ 		}
 
-		scope.xVel -= direction.x/500
-		scope.yVel -= direction.y/500
-		dot.xVel += direction.x/500
-		dot.yVel += direction.y/500
 	})
-
 
 }
 
+Dot.prototype.act = function(context){
+
+	this.updatePosition(context);
+	this.bounce();
+
+	this.findClose();
+	this.interact();
+
+	this.draw(context);
+	this.drawLines(context);
+
+};
 
 function createDot(context){
 	var currentDot = new Dot();
@@ -123,10 +227,16 @@ function createDot(context){
 
 }
 
+
+// protocol  //
+
 $(document).ready(function(){
 
-var canvas = document.getElementById('dots');
+sizeCanvas();
+
+var canvas = document.getElementById('dot-canvas');
 var context = canvas.getContext('2d');
+
 
 
 	for (var i = 0; i < dotNumber; i++){
@@ -138,12 +248,9 @@ var context = canvas.getContext('2d');
 		context.clearRect(0, 0, canvas.width, canvas.height);
 
 		dots.forEach(function(dot){
-			dot.updatePosition(context);
-			dot.bounce();
-			dot.findClose();
-			dot.pull();
-			dot.draw(context);
-			dot.drawLines(context);
+
+			dot.act(context);
+
 		})
 
 	},50 );

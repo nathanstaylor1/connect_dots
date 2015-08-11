@@ -1,13 +1,97 @@
-*{
-	margin: 0;
-	padding: 0;
+@white: #fafafa;
 
+*{
+	font-family: 'Raleway', sans-serif;
+	max-width: 100vw;
+}
+
+body{
+	max-width: 100vw;
 }
 
 canvas{
+	position: fixed;
 	width: 100vw;
 	height: 100vw;
-	display: block;
-	opacity: 1;
-	background-color: white;
+	z-index: -1000;
+	border: 1px solid #EEE;
 }
+
+nav{
+	height: 120px;
+	background-color: transparent;
+	border-bottom: none;
+	z-index: 100;
+	.navbar-header *{
+		z-index: 100;
+	}
+	&::after{
+		position: absolute;
+		top: 0px;
+		width: 100%;
+		height: 100%;
+		background-color: @white;
+		opacity: 0.8;
+		z-index: -1;
+	}
+}
+.window{
+	position: relative;
+}
+
+.window.lighter::after{
+	position: relative;
+	top: 0px;
+	left: 0px;
+	width: 100%;
+	height: 100%;
+	background-color: @white;
+	opacity: 0.8;
+}
+.page{
+	background-color: @white;
+}
+
+.content{
+	height: 100%;
+	margin-left: 10%;
+	width: 80%;
+	display: table;
+	.wrap{
+		display: table-cell;
+		text-align: center;
+		vertical-align: middle;
+		padding: 30px;
+		*{
+			margin-bottom: 50px;
+		}
+	}
+}
+
+.tagline{
+	font-size: 80px;
+	font-weight: 600;
+	opacity: 0.8;
+}
+
+.full-height {
+	height: 100vh;
+}
+
+.fixed{
+	position: fixed;
+}
+
+.btn-cta{
+	margin-top: 30px;
+	background-color: #F07D00;
+	opacity: 0.8;
+	color: @white;
+	font-weight: 600;
+	transition: all 300ms;
+	&:hover{
+		border-radius: 40px;
+	}
+}
+
+
